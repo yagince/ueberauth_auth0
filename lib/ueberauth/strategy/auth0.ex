@@ -25,7 +25,7 @@ defmodule Ueberauth.Strategy.Auth0 do
 
   alias OAuth2.{Client, Error, Response}
   alias Plug.Conn
-  alias Ueberauth.Auth.{Credentials, Info}
+  alias Ueberauth.Auth.{Credentials, Extra, Info}
 
   @doc """
   Handles the redirect to Auth0.
@@ -138,6 +138,21 @@ defmodule Ueberauth.Strategy.Auth0 do
   defp token_expired(%{expires_at: _}), do: true
 
   @doc """
+  Populates the extra section of the `Ueberauth.Auth` struct with auth0's
+  additional information from the profile.
+  """
+  def extra(conn) do
+    user = conn.private.auth0_user
+
+    %Extra{
+      raw_info: %{
+        email_verified: user["email_verified"],
+        app_metadata: Map.get(user, "app_metadata", %{})
+      }
+    }
+  end
+
+  @doc """
   Fetches the fields to populate the info section of the `Ueberauth.Auth` struct.
   """
   def info(conn) do
@@ -147,6 +162,9 @@ defmodule Ueberauth.Strategy.Auth0 do
       name: user["name"],
       nickname: user["nickname"],
       email: user["email"],
+      # Not entirely correct. The `location` field of `Ueerauth.Auth.Info`
+      # is intended for Location (city, country, ...) while the `locale`
+      # information returned by auth0 is used for internationalization.
       location: user["locale"],
       first_name: user["given_name"],
       last_name: user["family_name"],
